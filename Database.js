@@ -111,12 +111,8 @@ module.exports = class Database {
     return missingUrlPlayer;
   }
 
-  getCompletePlayers() {
-    let completePlayers = [];
-    for (let player of this.playerCollection) {
-      if (!player.isComplete) continue;
-      completePlayers.push(player);
-    }
-    return completePlayers;
+  async getCompletePlayers() {
+    let playerArray = await this.playerCollection.find({ isComplete: true }).toArray();
+    return playerArray;
   }
 };

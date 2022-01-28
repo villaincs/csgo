@@ -47,9 +47,7 @@ app.get("/", (req, res) => {
 
 app.get("/players", async (req, res) => {
   // send player list in order of ascending or descending statistic
-  let playerArray = await db.playerCollection.find().toArray();
-  // remove incomplete players
-  playerArray = playerArray.filter((player) => player.isComplete == true);
+  let playerArray = await db.getCompletePlayers();
   if (req.query.sort) {
     if (req.query.sort in (await playerArray[0].statistics)) {
       let orders = ["desc", "asc"];
