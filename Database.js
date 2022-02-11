@@ -8,27 +8,13 @@ const Player = require("./models/Player");
 const Highlight = require("./models/Highlight");
 const errorCodes = require("./error/errorCodes");
 
-const { MongoClient } = require("mongodb");
-const uri = "mongodb://csgoDB:csgoDBPassword@127.0.0.1/csgodb?retryWrites=true&w=majority";
-const client = new MongoClient(uri);
-
-async function run() {
-  try {
-    await client.connect();
-  } finally {
-  }
-}
-run().catch(console.dir);
+const { playerCollection, teamCollection, highlightCollection } = require("./mongo");
 
 module.exports = class Database {
-  constructor() {
-    this.playerCollection = client.db("csgodb").collection("players");
-    this.teamCollection = client.db("csgodb").collection("teams");
-    this.highlightCollection = client.db("csgodb").collection("playerHighlights");
-  }
+  constructor() {}
 
   async getPlayerById(id) {
-    let player = await Player.find(id);
+    let player = await Player.findByPlayerId(id);
     if (!player) throw new dbError.PlayerNotFoundError(id);
     return player;
   }
@@ -48,16 +34,17 @@ module.exports = class Database {
   //
   async updatePlayerObject(url) {
     let playerId = url.split("/")[url.split("/").length - 2];
-    let playerObj = await Player.find(playerId);
+    let playerObj = await Player.findByPlayerId(playerId);
 
     let isNewPlayer;
     if (!playerObj) {
       //add new player if ID doesn't exist
-      playerObj = await Player.createPlayer(url);
+      playerObj = Player.createPlayer(url);
       isNewPlayer = true;
     }
     try {
       await playerObj.populate();
+      await playerObj.save();
     } catch (error) {
       if (error.isDatabaseError) {
       } else {
@@ -72,7 +59,7 @@ module.exports = class Database {
     return got("https://www.hltv.org/ranking/teams").then(async (response) => {
       const dom = new JSDOM(response.body);
       let teamDivs = dom.window.document.querySelectorAll("div.ranked-team.standard-box");
-      teamDivs = [...teamDivs].slice(17);
+      teamDivs = [...teamDivs].slice(0);
 
       let teamsToParse = 1;
       for (let i = 0; i < teamsToParse; i++) {
@@ -112,7 +99,7 @@ module.exports = class Database {
   }
 
   async getCompletePlayers() {
-    let playerArray = await this.playerCollection.find({ isComplete: true }).toArray();
+    let playerArray = await playerCollection.find({ isComplete: true }).toArray();
     return playerArray;
   }
 };

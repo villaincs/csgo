@@ -74,7 +74,7 @@ const playerSchema = new mongoose.Schema({
         leaveDate: String,
       },
     ],
-    trophies: [String],
+    trophies: [],
   },
   playerId: String,
   playerHltvUrlName: String,
@@ -83,10 +83,24 @@ const playerSchema = new mongoose.Schema({
   isComplete: Boolean,
 });
 
-playerSchema.statics.find = async function find(id) {
-  let player = playerCollection.findOne({ playerId: id });
+playerSchema.statics.findByPlayerId = async function find(id) {
+  let player = await Player.findOne({ playerId: id });
+  console.log(player == true);
   if (player) return player;
   return null;
+};
+
+// creates and saves player to Player model
+playerSchema.statics.createPlayer = function createPlayer(hltvUrl) {
+  let urlSplit = hltvUrl.split("/");
+  let player = new Player({
+    playerId: urlSplit[urlSplit.length - 2],
+    playerHltvUrlName: urlSplit[urlSplit.length - 1],
+    hltvUrl: hltvUrl,
+    isComplete: false,
+  });
+  player.save();
+  return player;
 };
 
 playerSchema.methods.populate = async function populate() {
@@ -107,7 +121,8 @@ playerSchema.methods.populate = async function populate() {
     this.isComplete = false;
   }
 
-  await playerCollection.updateOne({ playerId: this.playerId }, { $set: this });
+  // await playerCollection.updateOne({ playerId: this.playerId }, { $set: this });
+  await this.save();
   await setTimeout(() => {}, 500);
 };
 

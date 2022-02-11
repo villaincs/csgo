@@ -4,7 +4,7 @@ const Database = require("./Database");
 const dbError = require("./error");
 const errorCodes = require("./error/errorCodes");
 
-const { playerCollection } = require("./mongo");
+const { playerCollection, teamCollection, highlightCollection } = require("./mongo");
 
 const express = require("express");
 const app = express();
