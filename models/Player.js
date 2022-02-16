@@ -58,13 +58,7 @@ const playerSchema = new mongoose.Schema({
     crosshairCode: Number,
   },
   career: {
-    highlights: [
-      {
-        name: String,
-        url: String,
-        id: String,
-      },
-    ],
+    highlights: [{ type: Schema.Types.ObjectId, ref: "Highlight" }],
     userAddedHighlights: [],
     teamsPlayedFor: [
       {
