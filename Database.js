@@ -70,20 +70,28 @@ module.exports = class Database {
         let teamLogo = teamDivs[i].querySelector("img").src;
         let teamRoster = [];
 
-        for (let playerDiv of teamDivs[i].querySelectorAll("td.player-holder a.pointer")) {
-          // populate player object
-          let playerUrl = `https://www.hltv.org${playerDiv.href}`;
-          let playerObj = await this.updatePlayerObject(playerUrl);
-          teamRoster.push(playerObj);
+        let teamObj = await Team.findOne({ id: teamId });
+        if (!teamObj) {
+          teamObj = new Team({
+            _id: teamMongoId,
+            id: teamId,
+            name: teamName,
+            position: teamPosition,
+            logo: teamLogo,
+          });
         }
 
-        let teamObject = await Team.find(teamId);
-        if (!teamObject) {
-          teamObject = new Team(teamName, teamPosition, teamLogo, teamId, teamRoster);
-          await teamObject.insert();
-        } else {
-          await teamObject.update(teamName, teamPosition, teamLogo, teamRoster);
+        // populate player objects and push to roster
+        for (let playerDiv of teamDivs[i].querySelectorAll("td.player-holder a.pointer")) {
+          let playerUrl = `https://www.hltv.org${playerDiv.href}`;
+          let playerObj = await this.updatePlayerObject(playerUrl);
+          // set team ref for player
+          playerObj.info.team = teamObj._id;
+          teamRoster.push(playerObj._id);
         }
+
+        teamObj.roster = teamRoster;
+        await teamObj.save();
       }
       console.log(`Finished parsing ${teamsToParse} ${teamsToParse == 1 ? "team" : "teams"}`);
     });

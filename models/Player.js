@@ -5,12 +5,65 @@ const uuid = require("uuid").v4;
 
 const { playerCollection, teamCollection, highlightCollection } = require("../mongo");
 
-const Career = require("./Career");
 const Highlight = require("./Highlight");
-const TeamPlayedFor = require("./TeamPlayedFor");
-const Statistics = require("./Statistics");
-const PlayerInfo = require("./PlayerInfo");
-const Settings = require("./Settings");
+const Team = require("./Team");
+
+class Info {
+  constructor(name, realName, nationality, birthDate, age, team, role, approxWinnings) {
+    this.name = name;
+    this.realName = realName;
+    this.nationality = nationality;
+    this.birthDate = birthDate;
+    this.age = age;
+    this.role = role;
+    this.approxWinnings = approxWinnings;
+  }
+}
+class Statistics {
+  constructor(
+    rating,
+    adr,
+    kpr,
+    dpr,
+    impact,
+    totalKills,
+    totalDeaths,
+    mapsPlayed,
+    roundsplayed,
+    hsPercentage,
+    kdRatio
+  ) {
+    this.rating = rating;
+    this.adr = adr;
+    this.kpr = kpr;
+    this.dpr = dpr;
+    this.impact = impact;
+    this.totalKills = totalKills;
+    this.totalDeaths = totalDeaths;
+    this.mapsPlayed = mapsPlayed;
+    this.roundsplayed = roundsplayed;
+    this.hsPercentage = hsPercentage;
+    this.kdRatio = kdRatio;
+  }
+}
+class Settings {
+  constructor(dpi, sensitivity, zoomSensitivity, resolution, scalingMode, crosshairCode) {
+    this.dpi = dpi;
+    this.sensitivity = sensitivity;
+    this.zoomSensitivity = zoomSensitivity;
+    this.resolution = resolution;
+    this.scalingMode = scalingMode;
+    this.crosshairCode = crosshairCode;
+  }
+}
+class TeamPlayedFor {
+  constructor(name, icon, joinDate, leaveDate) {
+    this.name = name;
+    this.icon = icon;
+    this.joinDate = joinDate;
+    this.leaveDate = leaveDate;
+  }
+}
 
 const mongoose = require("mongoose");
 connectMongoose().catch((err) => console.log(err));
@@ -19,12 +72,12 @@ async function connectMongoose() {
 }
 
 const playerSchema = new mongoose.Schema({
-  playerInfo: {
+  info: {
     name: String,
     realName: String,
     nationality: String,
     birthDate: String,
-    team: String,
+    team: { type: mongoose.Schema.Types.ObjectId, ref: "Team" },
     age: Number,
     role: String,
     approxWinnings: String,
@@ -58,7 +111,7 @@ const playerSchema = new mongoose.Schema({
     crosshairCode: Number,
   },
   career: {
-    highlights: [{ type: Schema.Types.ObjectId, ref: "Highlight" }],
+    highlights: [{ type: mongoose.Schema.Types.ObjectId, ref: "Highlight" }],
     userAddedHighlights: [],
     teamsPlayedFor: [
       {
@@ -99,7 +152,7 @@ playerSchema.methods.populate = async function populate() {
       this.getHighlights(this.playerHltvUrlName, this.playerId),
     ]);
     await this.getLiquipediaData(this.liquipediaUrl);
-    console.log(`Successfully parsed ${this.playerInfo.team} ${this.playerInfo.name}\n`);
+    console.log(`Successfully parsed ${this.Info.name}\n`);
     this.isComplete = true;
   } catch (error) {
     console.log(`Parsing unsuccessful (${this.hltvUrl})\n`);
@@ -207,11 +260,17 @@ playerSchema.methods.getHighlights = function getHighlights(playerName, playerId
         let url = `https://hltv.org${article.href}`;
         let id = uuid();
 
-        let highlightObj = new Highlight(name, url, id);
-        highlightArray.push(highlightObj);
-        // insert highlight to DB if doesnt already exist
-        if ((await highlightCollection.findOne({ id: id })) == false) {
-          await highlightCollection.insertOne(highlightObj);
+        let highlightObj = new Highlight({
+          name: name,
+          url: url,
+          id: id,
+          player: this._id,
+        });
+
+        highlightArray.push(highlightObj._id);
+        // save highlight to DB if doesnt already exist
+        if ((await Highlight.findOne({ id })) == false) {
+          await highlightObj.save();
         }
       }
     }
@@ -294,8 +353,8 @@ playerSchema.methods.getPlayerInfo = function getPlayerInfo(liquipediaDom) {
     let role = tempObject["Role:"] || tempObject["Roles:"];
     let approxWinnings = tempObject["Approx. Total Winnings:"];
 
-    let infoObject = new PlayerInfo(name, realName, nationality, birthDate, age, team, role, approxWinnings);
-    this.playerInfo = infoObject;
+    let infoObject = new Info(name, realName, nationality, birthDate, age, role, approxWinnings);
+    this.Info = infoObject;
   } catch (error) {
     throw error;
   }
@@ -411,7 +470,7 @@ module.exports = Player;
 //   constructor(hltvUrl) {
 //     if (!hltvUrl) return;
 //     let urlSplit = hltvUrl.split("/");
-//     this.playerInfo = {};
+//     this.Info = {};
 //     this.statistics;
 //     this.gear = {};
 //     this.settings = {};
@@ -424,7 +483,7 @@ module.exports = Player;
 //   }
 
 //   importPlayerData(playerData) {
-//     this.playerInfo = playerData.playerInfo;
+//     this.Info = playerData.Info;
 //     this.statistics = playerData.statistics;
 //     this.gear = playerData.gear;
 //     this.settings = playerData.settings;
@@ -471,7 +530,7 @@ module.exports = Player;
 //         this.getHighlights(this.playerHltvUrlName, this.playerId),
 //       ]);
 //       await this.getLiquipediaData(this.liquipediaUrl);
-//       console.log(`Successfully parsed ${this.playerInfo.team} ${this.playerInfo.name}\n`);
+//       console.log(`Successfully parsed ${this.Info.team} ${this.Info.name}\n`);
 //       this.isComplete = true;
 //     } catch (error) {
 //       console.log(`Parsing unsuccessful (${this.hltvUrl})\n`);
@@ -677,8 +736,8 @@ module.exports = Player;
 //       let role = tempObject["Role:"] || tempObject["Roles:"];
 //       let approxWinnings = tempObject["Approx. Total Winnings:"];
 
-//       let infoObject = new PlayerInfo(name, realName, nationality, birthDate, age, team, role, approxWinnings);
-//       this.playerInfo = infoObject;
+//       let infoObject = new Info(name, realName, nationality, birthDate, age, team, role, approxWinnings);
+//       this.Info = infoObject;
 //     } catch (error) {
 //       throw error;
 //     }
