@@ -15,7 +15,7 @@ const Settings = require("./Settings");
 const mongoose = require("mongoose");
 connectMongoose().catch((err) => console.log(err));
 async function connectMongoose() {
-  await mongoose.connect("mongodb://localhost:27017/test");
+  await mongoose.connect("mongodb://localhost:27017/csgodb");
 }
 
 const playerSchema = new mongoose.Schema({
@@ -83,13 +83,6 @@ const playerSchema = new mongoose.Schema({
   isComplete: Boolean,
 });
 
-playerSchema.statics.findByPlayerId = async function find(id) {
-  let player = await Player.findOne({ playerId: id });
-  console.log(player == true);
-  if (player) return player;
-  return null;
-};
-
 // creates and saves player to Player model
 playerSchema.statics.createPlayer = function createPlayer(hltvUrl) {
   let urlSplit = hltvUrl.split("/");
@@ -99,7 +92,6 @@ playerSchema.statics.createPlayer = function createPlayer(hltvUrl) {
     hltvUrl: hltvUrl,
     isComplete: false,
   });
-  player.save();
   return player;
 };
 
@@ -121,8 +113,6 @@ playerSchema.methods.populate = async function populate() {
     this.isComplete = false;
   }
 
-  // await playerCollection.updateOne({ playerId: this.playerId }, { $set: this });
-  await this.save();
   await setTimeout(() => {}, 500);
 };
 
@@ -420,7 +410,7 @@ playerSchema.methods.getAge = function getAge(bDate) {
   return age;
 };
 
-const Player = new mongoose.model("Player", playerSchema);
+const Player = new mongoose.model("players", playerSchema);
 module.exports = Player;
 
 // module.exports = class Player {

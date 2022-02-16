@@ -14,7 +14,7 @@ module.exports = class Database {
   constructor() {}
 
   async getPlayerById(id) {
-    let player = await Player.findByPlayerId(id);
+    let player = await Player.findOne({ playerId: id });
     if (!player) throw new dbError.PlayerNotFoundError(id);
     return player;
   }
@@ -34,16 +34,16 @@ module.exports = class Database {
   //
   async updatePlayerObject(url) {
     let playerId = url.split("/")[url.split("/").length - 2];
-    let playerObj = await Player.findByPlayerId(playerId);
+    let playerObj = await Player.findOne({ playerId });
 
-    let isNewPlayer;
     if (!playerObj) {
       //add new player if ID doesn't exist
       playerObj = Player.createPlayer(url);
-      isNewPlayer = true;
     }
+
     try {
       await playerObj.populate();
+      playerObj.mmm = 1;
       await playerObj.save();
     } catch (error) {
       if (error.isDatabaseError) {
@@ -61,7 +61,7 @@ module.exports = class Database {
       let teamDivs = dom.window.document.querySelectorAll("div.ranked-team.standard-box");
       teamDivs = [...teamDivs].slice(0);
 
-      let teamsToParse = 1;
+      let teamsToParse = 20;
       for (let i = 0; i < teamsToParse; i++) {
         let hrefSplit = teamDivs[i].querySelector("a.moreLink:not(.details)").href.split("/");
         let teamId = hrefSplit[hrefSplit.length - 2];
@@ -99,7 +99,7 @@ module.exports = class Database {
   }
 
   async getCompletePlayers() {
-    let playerArray = await playerCollection.find({ isComplete: true }).toArray();
+    let playerArray = await Player.find({ isComplete: true });
     return playerArray;
   }
 };
