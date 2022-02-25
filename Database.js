@@ -8,42 +8,28 @@ const Player = require("./models/Player");
 const Highlight = require("./models/Highlight");
 const errorCodes = require("./error/errorCodes");
 
-const { playerCollection, teamCollection, highlightCollection } = require("./mongo");
-
 module.exports = class Database {
   constructor() {}
+  //##########################################################################################################
+  // player functions
+  //##########################################################################################################
 
   async getPlayerById(id) {
-    let player = await Player.findOne({ playerId: id });
+    let player = await Player.findById(id);
     if (!player) throw new dbError.PlayerNotFoundError(id);
     return player;
   }
 
-  async deleteHighlightById(highlightId) {
-    let highlightToDelete = this.getPlayerHighlightById(highlightId);
-    let playerHighlightArray = highlightToDelete.player.career.highlights;
-    playerHighlightArray.splice(playerHighlightArray.indexOf(highlightToDelete), 1);
-  }
-
-  async addHighlightByPlayerId(playerId, highlightName, highlightUrl) {
-    let player = await this.getPlayerById(playerId);
-    player.career.userAddedHighlights.push(new Highlight(highlightName, highlightUrl, uuid()));
-    return;
-  }
-
-  //
   async updatePlayerObject(url) {
     let playerId = url.split("/")[url.split("/").length - 2];
-    let playerObj = await Player.findOne({ playerId });
+    let playerObj = await Player.findById(playerId);
 
     if (!playerObj) {
       //add new player if ID doesn't exist
-      playerObj = Player.createPlayer(url);
+      playerObj = Player.createPlayerByHltvUrl(url);
     }
-
     try {
-      await playerObj.populate();
-      playerObj.mmm = 1;
+      await playerObj.populatePlayer();
       await playerObj.save();
     } catch (error) {
       if (error.isDatabaseError) {
@@ -68,13 +54,10 @@ module.exports = class Database {
         let teamName = teamDivs[i].querySelector("span.name").textContent;
         let teamPosition = teamDivs[i].querySelector("span.position").textContent.substring(1);
         let teamLogo = teamDivs[i].querySelector("img").src;
-        let teamRoster = [];
-
-        let teamObj = await Team.findOne({ id: teamId });
+        let teamObj = await Team.findById(teamId);
         if (!teamObj) {
           teamObj = new Team({
-            _id: teamMongoId,
-            id: teamId,
+            _id: teamId,
             name: teamName,
             position: teamPosition,
             logo: teamLogo,
@@ -82,6 +65,7 @@ module.exports = class Database {
         }
 
         // populate player objects and push to roster
+        let teamRoster = [];
         for (let playerDiv of teamDivs[i].querySelectorAll("td.player-holder a.pointer")) {
           let playerUrl = `https://www.hltv.org${playerDiv.href}`;
           let playerObj = await this.updatePlayerObject(playerUrl);
@@ -97,17 +81,27 @@ module.exports = class Database {
     });
   }
 
-  async fixLiquipediaUrlById(id, liquipediaUrl) {
-    let missingUrlPlayer = this.getPlayerById(id);
-    missingUrlPlayer.liquipediaUrl = liquipediaUrl;
-    await missingUrlPlayer.populate();
-
-    await this.playerUrlExceptions.remove({ playerId: id.toString() });
-    return missingUrlPlayer;
-  }
-
   async getCompletePlayers() {
     let playerArray = await Player.find({ isComplete: true });
     return playerArray;
+  }
+
+  //##########################################################################################################
+  // highlight functions
+  //##########################################################################################################
+
+  // TODO: add highlight to database and make reference to player
+  async addHighlightByPlayerId(playerId, name, url) {
+    let highlight = new Highlight({
+      name: name,
+      url: url,
+      player: playerId,
+    });
+    await highlight.save();
+  }
+
+  // TODO: delete highlight from collection
+  async deleteHighlightById(id) {
+    await Highlight.deleteOne({ _id: id });
   }
 };
