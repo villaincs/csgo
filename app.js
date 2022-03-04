@@ -41,7 +41,10 @@ function isEmptyString(...strings) {
   return false;
 }
 
-app.get("/", (req, res) => {
+app.get("/", async (req, res) => {
+  console.log(
+    await Player.findOne({ playerId: "7998" }).populate({ path: "career", populate: { path: "highlights" } })
+  );
   res.send("Hello World!");
 });
 
@@ -81,23 +84,24 @@ app.get("/team-ranking", (req, res) => {
 /* Expected req.body
  {
    playerId: string,
-   highlightName: string,
-   highlighUrl: string
+   name: string,
+   url: string
   }
 */
-app.post("/highlight", (req, res) => {
-  if (!(req.body.highlightName && req.body.highlightUrl && req.body.playerId)) {
+app.post("/highlight", async (req, res) => {
+  if (!(req.body.name && req.body.url && req.body.playerId)) {
     res.status(400).send(`Error: highlightName, highlightUrl, playerId can't be empty`);
     return;
   }
 
   try {
-    db.addHighlightByPlayerId(req.body.playerId, req.body.highlightName, req.body.highlightUrl);
+    await db.addHighlightByPlayerId(req.body.playerId, req.body.highlightName, req.body.highlightUrl);
     res.send(`Successfully added highlight to player`);
   } catch (error) {
-    if (error.isErrorCode(errorCodes.PLAYER_NOT_FOUND.code)) {
-      res.status(400).send(error);
-    }
+    // if (error.isErrorCode(errorCodes.PLAYER_NOT_FOUND.code)) {
+    //   res.status(400).send(error);
+    // }
+    console.log(error);
   }
 });
 
@@ -123,12 +127,6 @@ app.post("/update-team-ranking", async (req, res) => {
 app.get("/fix-liquipedia-urls", (req, res) => {
   res.send(db.playerUrlExceptions);
 });
-
-async function dddd() {
-  let player = await db.updatePlayerObject("https://www.hltv.org/player/7998/s1mple");
-  // console.log(player);
-}
-// dddd();
 
 /**
  * {

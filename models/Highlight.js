@@ -7,10 +7,10 @@ async function connectMongoose() {
 const Player = require("./Player");
 
 const schema = new mongoose.Schema({
+  _id: String,
   name: String,
   url: String,
-  id: String,
   player: { type: mongoose.Schema.Types.ObjectId, ref: "Player" },
 });
 
-module.exports = new mongoose.model("playerHighlights", schema);
+module.exports = new mongoose.model("playerhighlights", schema);

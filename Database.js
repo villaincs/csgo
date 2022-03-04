@@ -9,25 +9,25 @@ const Highlight = require("./models/Highlight");
 const errorCodes = require("./error/errorCodes");
 
 module.exports = class Database {
-  constructor() {}
   //##########################################################################################################
   // player functions
   //##########################################################################################################
 
   async getPlayerById(id) {
-    let player = await Player.findById(id);
+    let player = await Player.findOne({ playerId: id });
     if (!player) throw new dbError.PlayerNotFoundError(id);
     return player;
   }
 
   async updatePlayerObject(url) {
     let playerId = url.split("/")[url.split("/").length - 2];
-    let playerObj = await Player.findById(playerId);
+    let playerObj = await Player.findOne({ playerId: playerId });
 
     if (!playerObj) {
       //add new player if ID doesn't exist
       playerObj = Player.createPlayerByHltvUrl(url);
     }
+
     try {
       await playerObj.populatePlayer();
       await playerObj.save();
@@ -55,6 +55,7 @@ module.exports = class Database {
         let teamPosition = teamDivs[i].querySelector("span.position").textContent.substring(1);
         let teamLogo = teamDivs[i].querySelector("img").src;
         let teamObj = await Team.findById(teamId);
+
         if (!teamObj) {
           teamObj = new Team({
             _id: teamId,
@@ -72,10 +73,12 @@ module.exports = class Database {
           // set team ref for player
           playerObj.info.team = teamObj._id;
           teamRoster.push(playerObj._id);
+          break;
         }
 
         teamObj.roster = teamRoster;
         await teamObj.save();
+        break;
       }
       console.log(`Finished parsing ${teamsToParse} ${teamsToParse == 1 ? "team" : "teams"}`);
     });
@@ -90,7 +93,6 @@ module.exports = class Database {
   // highlight functions
   //##########################################################################################################
 
-  // TODO: add highlight to database and make reference to player
   async addHighlightByPlayerId(playerId, name, url) {
     let highlight = new Highlight({
       name: name,
@@ -100,7 +102,6 @@ module.exports = class Database {
     await highlight.save();
   }
 
-  // TODO: delete highlight from collection
   async deleteHighlightById(id) {
     await Highlight.deleteOne({ _id: id });
   }

@@ -5,13 +5,18 @@ async function connectMongoose() {
 }
 
 const Player = require("./Player");
-
+//TODO: use virtual for players
 const schema = new mongoose.Schema({
-  id: String,
+  _id: String,
   name: String,
   position: Number,
   logo: String,
-  roster: [{ type: mongoose.Schema.Types.ObjectId, ref: "Player" }],
+});
+
+schema.virtual("players", {
+  ref: "players",
+  localField: "_id",
+  foreignField: "team",
 });
 
 module.exports = new mongoose.model("teams", schema);
