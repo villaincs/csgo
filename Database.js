@@ -81,9 +81,32 @@ module.exports = class Database {
     });
   }
 
-  async getCompletePlayers() {
-    let playerArray = await Player.find({ isComplete: true }).populate("career.highlights");
+  async getCompletePlayers(sort, order) {
+    let playerArray;
+
+    if (Player.schema.tree[sort]) {
+      playerArray = await Player.find({ isComplete: true })
+        .populate("career.highlights")
+        .sort({ [sort]: order });
+    } else {
+      playerArray = await Player.find({ isComplete: true }).populate("career.highlights");
+    }
+
     return playerArray;
+  }
+
+  async getTeamArray(sort, order) {
+    let teamArray;
+
+    if (Team.schema.tree[sort]) {
+      teamArray = await Team.find({})
+        .populate("players")
+        .sort({ [sort]: order });
+    } else {
+      teamArray = await Team.find({}).populate("players");
+    }
+
+    return teamArray;
   }
 
   //##########################################################################################################
@@ -91,11 +114,14 @@ module.exports = class Database {
   //##########################################################################################################
 
   async addHighlightByPlayerId(playerId, name, url) {
+    let playerRef = await Player.find({ playerId: playerId })._id;
+
     let highlight = new Highlight({
       name: name,
       url: url,
-      player: playerId,
+      player: playerRef,
     });
+
     await highlight.save();
   }
 

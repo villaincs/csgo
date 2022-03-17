@@ -48,20 +48,7 @@ app.get("/", async (req, res) => {
 
 app.get("/players", async (req, res) => {
   // send player list in order of ascending or descending statistic
-  let playerArray = await db.getCompletePlayers();
-  // TODO: Maybe consider changing the sorting algorithm to use mongoose query with sorting.
-  if (req.query.sort) {
-    if (req.query.sort in (await playerArray[0].statistics)) {
-      let orders = ["desc", "asc"];
-      let order = req.query.order ?? "desc";
-      if (!orders.includes(order)) {
-        res.send(`Order arguments invalid, must be either asc or desc`);
-      }
-      res.send(sortByStat(req.query.sort, order));
-    } else {
-      res.send(`${req.query.sort} is not a stat`);
-    }
-  }
+  let playerArray = await db.getCompletePlayers(req.query.sort, req.query.order);
 
   res.send(playerArray);
 });
@@ -76,9 +63,11 @@ app.get("/players/:playerId", async (req, res) => {
   }
 });
 
-app.get("/team-ranking", (req, res) => {
+app.get("/teams", async (req, res) => {
   // TODO: FIX IT
-  res.send(db.teamArray);
+  let teamArray = await db.getTeamArray(req.query.sort, req.query.order);
+
+  res.send(teamArray);
 });
 
 /* Expected req.body
