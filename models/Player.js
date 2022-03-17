@@ -7,6 +7,12 @@ const { playerCollection, teamCollection, highlightCollection } = require("../mo
 const Highlight = require("./Highlight");
 const Team = require("./Team");
 
+const mongoose = require("mongoose");
+connectMongoose().catch((err) => console.log(err));
+async function connectMongoose() {
+  await mongoose.connect("mongodb://localhost:27017/csgodb");
+}
+
 class Info {
   constructor(name, realName, nationality, birthDate, age, team, role, approxWinnings) {
     this.name = name;
@@ -16,6 +22,7 @@ class Info {
     this.age = age;
     this.role = role;
     this.approxWinnings = approxWinnings;
+    this.team = undefined;
   }
 }
 class Statistics {
@@ -64,14 +71,28 @@ class TeamPlayedFor {
   }
 }
 
-const mongoose = require("mongoose");
-connectMongoose().catch((err) => console.log(err));
-async function connectMongoose() {
-  await mongoose.connect("mongodb://localhost:27017/csgodb");
-}
-//TODO: use virtual for highlight
+const careerSchema = new mongoose.Schema(
+  {
+    teamsPlayedFor: [
+      {
+        name: String,
+        icon: String,
+        joinDate: String,
+        leaveDate: String,
+      },
+    ],
+    trophies: [],
+    player: { type: mongoose.Schema.Types.ObjectId, ref: "Player" },
+  },
+  {
+    toJSON: { virtuals: true }, // So `res.json()` and other `JSON.stringify()` functions include virtuals
+    toObject: { virtuals: true }, // So `console.log()` and other functions that use `toObject()` include virtuals
+  }
+);
+
 const playerSchema = new mongoose.Schema(
   {
+    playerId: String,
     info: {
       name: String,
       realName: String,
@@ -110,18 +131,7 @@ const playerSchema = new mongoose.Schema(
       scalingMode: String,
       crosshairCode: Number,
     },
-    career: {
-      teamsPlayedFor: [
-        {
-          name: String,
-          icon: String,
-          joinDate: String,
-          leaveDate: String,
-        },
-      ],
-      trophies: [],
-    },
-    playerId: String,
+    career: careerSchema,
     playerHltvUrlName: String,
     hltvUrl: String,
     liquipediaUrl: String,
@@ -133,21 +143,26 @@ const playerSchema = new mongoose.Schema(
   }
 );
 
-playerSchema.virtual("highlights", {
+careerSchema.virtual("highlights", {
   ref: "playerhighlights",
-  localField: "_id",
+  localField: "player",
   foreignField: "player",
 });
 
 // creates and saves player to Player model
 playerSchema.statics.createPlayerByHltvUrl = function (hltvUrl) {
   let urlSplit = hltvUrl.split("/");
+  let playerMongooseId = mongoose.Types.ObjectId();
+
   let player = new Player({
-    _id: mongoose.Types.ObjectId(),
+    _id: playerMongooseId,
     playerId: urlSplit[urlSplit.length - 2],
     playerHltvUrlName: urlSplit[urlSplit.length - 1],
     hltvUrl: hltvUrl,
     isComplete: false,
+    career: {
+      player: playerMongooseId,
+    },
   });
   return player;
 };
@@ -166,7 +181,6 @@ playerSchema.methods.populatePlayer = async function () {
     this.isComplete = true;
   } catch (error) {
     console.log(`Parsing unsuccessful (${this.hltvUrl})\n`);
-    console.log(error);
     this.isComplete = false;
   }
 
@@ -277,14 +291,15 @@ function getHighlights() {
           continue;
         }
 
-        let name = articleContent.substring(articleContent.indexOf(" ") + 1);
-        let url = `https://hltv.org${article.href}`;
         let id = article.href.split("/")[2];
 
         let highlightObj = await Highlight.findOne({ highlightId: id });
         if (highlightObj) {
           continue;
         }
+
+        let name = articleContent.substring(articleContent.indexOf(" ") + 1);
+        let url = `https://hltv.org${article.href}`;
 
         highlightObj = new Highlight({
           _id: mongoose.Types.ObjectId(),
@@ -339,8 +354,9 @@ async function getLiquipediaData(liquipediaUrl) {
     if (error.statusCode == 404) {
       this.liquipediaUrl = null;
       throw new dbError.InvalidLiquipediaUrlError();
-    } else {
     }
+
+    throw error;
   }
 }
 

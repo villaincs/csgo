@@ -7,7 +7,7 @@ async function connectMongoose() {
 const Player = require("./Player");
 //TODO: use virtual for players
 const schema = new mongoose.Schema({
-  _id: String,
+  teamId: String,
   name: String,
   position: Number,
   logo: String,

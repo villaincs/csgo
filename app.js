@@ -42,15 +42,14 @@ function isEmptyString(...strings) {
 }
 
 app.get("/", async (req, res) => {
-  console.log(
-    await Player.findOne({ playerId: "7998" }).populate({ path: "career", populate: { path: "highlights" } })
-  );
+  // console.log(await Player.findOne({ playerId: "7998" }));
   res.send("Hello World!");
 });
 
 app.get("/players", async (req, res) => {
   // send player list in order of ascending or descending statistic
   let playerArray = await db.getCompletePlayers();
+  // TODO: Maybe consider changing the sorting algorithm to use mongoose query with sorting.
   if (req.query.sort) {
     if (req.query.sort in (await playerArray[0].statistics)) {
       let orders = ["desc", "asc"];
@@ -78,6 +77,7 @@ app.get("/players/:playerId", async (req, res) => {
 });
 
 app.get("/team-ranking", (req, res) => {
+  // TODO: FIX IT
   res.send(db.teamArray);
 });
 
@@ -88,6 +88,7 @@ app.get("/team-ranking", (req, res) => {
    url: string
   }
 */
+// TODO: FIX IT
 app.post("/highlight", async (req, res) => {
   if (!(req.body.name && req.body.url && req.body.playerId)) {
     res.status(400).send(`Error: highlightName, highlightUrl, playerId can't be empty`);
@@ -110,6 +111,7 @@ app.post("/highlight", async (req, res) => {
  *  id: string,
  * }
  */
+// TODO: FIX IT
 app.delete("/highlight", async (req, res) => {
   if (isEmptyString(req.body.id)) {
     res.status(400).send(`Error: id can't be empty`);
@@ -124,6 +126,7 @@ app.post("/update-team-ranking", async (req, res) => {
   res.send(`Successfully updated team ranking`);
 });
 
+// TODO: We need it. Bring it back.
 app.get("/fix-liquipedia-urls", (req, res) => {
   res.send(db.playerUrlExceptions);
 });
@@ -134,6 +137,7 @@ app.get("/fix-liquipedia-urls", (req, res) => {
  *  liquipediaUrl: string
  * }
  */
+// TODO: Fix this as well. You want to be able to distinguish which player data has invalid liquipedia url.
 app.post("/fix-liquipedia-urls", async (req, res) => {
   try {
     let missingUrlPlayer = await db.fixLiquipediaUrlById(req.body.playerId, req.body.liquipediaUrl);

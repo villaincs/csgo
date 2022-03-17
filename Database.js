@@ -14,17 +14,19 @@ module.exports = class Database {
   //##########################################################################################################
 
   async getPlayerById(id) {
-    let player = await Player.findOne({ playerId: id });
+    let player = await Player.findOne({ playerId: id }).populate("career.highlights");
+
     if (!player) throw new dbError.PlayerNotFoundError(id);
     return player;
   }
 
+  // create/find and populate player
   async updatePlayerObject(url) {
     let playerId = url.split("/")[url.split("/").length - 2];
     let playerObj = await Player.findOne({ playerId: playerId });
 
     if (!playerObj) {
-      //add new player if ID doesn't exist
+      // add new player if ID doesn't exist
       playerObj = Player.createPlayerByHltvUrl(url);
     }
 
@@ -47,45 +49,40 @@ module.exports = class Database {
       let teamDivs = dom.window.document.querySelectorAll("div.ranked-team.standard-box");
       teamDivs = [...teamDivs].slice(0);
 
-      let teamsToParse = 20;
+      let teamsToParse = 2;
       for (let i = 0; i < teamsToParse; i++) {
         let hrefSplit = teamDivs[i].querySelector("a.moreLink:not(.details)").href.split("/");
         let teamId = hrefSplit[hrefSplit.length - 2];
         let teamName = teamDivs[i].querySelector("span.name").textContent;
         let teamPosition = teamDivs[i].querySelector("span.position").textContent.substring(1);
         let teamLogo = teamDivs[i].querySelector("img").src;
-        let teamObj = await Team.findById(teamId);
+
+        let teamObj = await Team.findOne({ teamId });
 
         if (!teamObj) {
-          teamObj = new Team({
-            _id: teamId,
-            name: teamName,
-            position: teamPosition,
-            logo: teamLogo,
-          });
+          teamObj = new Team({ teamId });
         }
 
-        // populate player objects and push to roster
-        let teamRoster = [];
+        teamObj.name = teamName;
+        teamObj.position = teamPosition;
+        teamObj.logo = teamLogo;
+
+        // set team id refs for player
         for (let playerDiv of teamDivs[i].querySelectorAll("td.player-holder a.pointer")) {
           let playerUrl = `https://www.hltv.org${playerDiv.href}`;
           let playerObj = await this.updatePlayerObject(playerUrl);
           // set team ref for player
           playerObj.info.team = teamObj._id;
-          teamRoster.push(playerObj._id);
-          break;
         }
 
-        teamObj.roster = teamRoster;
         await teamObj.save();
-        break;
       }
       console.log(`Finished parsing ${teamsToParse} ${teamsToParse == 1 ? "team" : "teams"}`);
     });
   }
 
   async getCompletePlayers() {
-    let playerArray = await Player.find({ isComplete: true });
+    let playerArray = await Player.find({ isComplete: true }).populate("career.highlights");
     return playerArray;
   }
 
