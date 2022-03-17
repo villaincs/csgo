@@ -277,12 +277,12 @@ function getTrophies() {
   });
 }
 
+// get highlights and save to highlight collection
 function getHighlights() {
   return got(`https://www.hltv.org/player/${this.playerId}/${this.playerHltvUrlName}#tab-newsBox`).then(
     async (response) => {
       const dom = new JSDOM(response.body);
       let newsTab = dom.window.document.querySelectorAll("a.subTab-newsArticle");
-      let highlightArray = [];
       for (let article of newsTab) {
         // Extract video articles that start with "Video: Player"
         let articleContent = article.childNodes[1].textContent;
@@ -302,7 +302,6 @@ function getHighlights() {
         let url = `https://hltv.org${article.href}`;
 
         highlightObj = new Highlight({
-          _id: mongoose.Types.ObjectId(),
           highlightId: id,
           name: name,
           url: url,

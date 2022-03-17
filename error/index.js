@@ -35,3 +35,9 @@ exports.PlayerNotFoundError = class PlayerNotFoundError extends DatabaseError {
     super(errorCodes.PLAYER_NOT_FOUND, { playerId });
   }
 };
+
+exports.HighlightNotFoundError = class HighlightNotFoundError extends DatabaseError {
+  constructor(highlightId) {
+    super(errorCodes.HIGHLIGHT_NOT_FOUND, { highlightId });
+  }
+};

@@ -113,19 +113,30 @@ module.exports = class Database {
   // highlight functions
   //##########################################################################################################
 
+  async getHighlightById(id) {
+    let highlight = await Highlight.findOne({ highlightId: id });
+
+    if (!highlight) throw new dbError.HighlightNotFoundError(id);
+    return highlight;
+  }
+
+  //TODO: figure out highlightId
   async addHighlightByPlayerId(playerId, name, url) {
-    let playerRef = await Player.find({ playerId: playerId })._id;
+    let player = await Player.find({ playerId: playerId });
 
     let highlight = new Highlight({
+      // highlightId:
       name: name,
       url: url,
-      player: playerRef,
+      player: player._id,
     });
 
     await highlight.save();
   }
 
   async deleteHighlightById(id) {
-    await Highlight.deleteOne({ _id: id });
+    // get error if highlight doesn't exist
+    await this.getHighlightById(id);
+    await Highlight.deleteOne({ highlightId: id });
   }
 };

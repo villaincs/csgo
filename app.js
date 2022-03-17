@@ -77,7 +77,6 @@ app.get("/teams", async (req, res) => {
    url: string
   }
 */
-// TODO: FIX IT
 app.post("/highlight", async (req, res) => {
   if (!(req.body.name && req.body.url && req.body.playerId)) {
     res.status(400).send(`Error: highlightName, highlightUrl, playerId can't be empty`);
@@ -106,8 +105,12 @@ app.delete("/highlight", async (req, res) => {
     res.status(400).send(`Error: id can't be empty`);
   }
 
-  await db.deleteHighlightById(req.body.id);
-  res.send(`Successfully deleted highlight from ${highlightToDelete.player.playerInfo.name}`);
+  try {
+    await db.deleteHighlightById(req.body.id);
+    res.send("Successfully deleted highlight");
+  } catch (error) {
+    res.send(error);
+  }
 });
 
 app.post("/update-team-ranking", async (req, res) => {
