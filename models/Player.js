@@ -2,7 +2,7 @@ const got = require("got");
 const { JSDOM } = require("jsdom");
 const dbError = require("../error");
 
-const { playerCollection, teamCollection, highlightCollection } = require("../mongo");
+const { playerCollection, teamCollection, highlightCollection, liquipediaUrlExceptions } = require("../mongo");
 
 const Highlight = require("./Highlight");
 const Team = require("./Team");
@@ -333,7 +333,6 @@ async function getLiquipediaData(liquipediaUrl) {
     const playerDataArray = liquipediaEditDom.window.document.getElementById("wpTextbox1").textContent.split("\n");
     // Make object containing player settings data
     let playerDataObject = {};
-    // Using loop
     for (let data of playerDataArray) {
       function parseLine(str) {
         let key = str.substring(1, str.indexOf("="));

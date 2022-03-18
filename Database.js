@@ -109,6 +109,15 @@ module.exports = class Database {
     return teamArray;
   }
 
+  async getInvalidLiquipediaUrlPlayers() {
+    let players = await Player.find({liquipediaUrl: null});
+    players = players.map(p => {
+      playerId: p.playerId,
+      hltvUrl: p.hltvUrl,
+    });
+    return players;
+  }
+
   //##########################################################################################################
   // highlight functions
   //##########################################################################################################

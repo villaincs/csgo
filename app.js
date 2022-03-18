@@ -64,7 +64,6 @@ app.get("/players/:playerId", async (req, res) => {
 });
 
 app.get("/teams", async (req, res) => {
-  // TODO: FIX IT
   let teamArray = await db.getTeamArray(req.query.sort, req.query.order);
 
   res.send(teamArray);
@@ -99,7 +98,6 @@ app.post("/highlight", async (req, res) => {
  *  id: string,
  * }
  */
-// TODO: FIX IT
 app.delete("/highlight", async (req, res) => {
   if (isEmptyString(req.body.id)) {
     res.status(400).send(`Error: id can't be empty`);
