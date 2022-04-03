@@ -1,11 +1,6 @@
-const mongoose = require("mongoose");
-connectMongoose().catch((err) => console.log(err));
-async function connectMongoose() {
-  await mongoose.connect("mongodb://localhost:27017/csgodb");
-}
+const { mongoose } = require("../mongo");
 
 const Player = require("./Player");
-//TODO: use virtual for players
 const schema = new mongoose.Schema({
   teamId: String,
   name: String,

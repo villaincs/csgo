@@ -1,7 +1,6 @@
 let dbError = require("./error");
 const got = require("got");
 const { JSDOM } = require("jsdom");
-const uuid = require("uuid").v4;
 
 const Team = require("./models/Team");
 const Player = require("./models/Player");
@@ -110,11 +109,11 @@ module.exports = class Database {
   }
 
   async getInvalidLiquipediaUrlPlayers() {
-    let players = await Player.find({liquipediaUrl: null});
-    players = players.map(p => {
+    let players = await Player.find({ liquipediaUrl: null });
+    players = players.map((p) => ({
       playerId: p.playerId,
       hltvUrl: p.hltvUrl,
-    });
+    }));
     return players;
   }
 
@@ -129,12 +128,10 @@ module.exports = class Database {
     return highlight;
   }
 
-  //TODO: figure out highlightId
   async addHighlightByPlayerId(playerId, name, url) {
     let player = await Player.find({ playerId: playerId });
 
     let highlight = new Highlight({
-      // highlightId:
       name: name,
       url: url,
       player: player._id,

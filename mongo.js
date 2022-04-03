@@ -1,5 +1,6 @@
+require("dotenv").config();
 const { MongoClient } = require("mongodb");
-const uri = "mongodb://csgoDB:csgoDBPassword@127.0.0.1/csgodb?retryWrites=true&w=majority";
+const uri = process.env.ATLAS_URL;
 const client = new MongoClient(uri);
 
 (async function run() {
@@ -9,6 +10,10 @@ const client = new MongoClient(uri);
   }
 })();
 
-exports.playerCollection = client.db("csgodb").collection("players");
-exports.teamCollection = client.db("csgodb").collection("teams");
-exports.highlightCollection = client.db("csgodb").collection("playerHighlights");
+const mongoose = require("mongoose");
+connectMongoose().catch((err) => console.log(err));
+async function connectMongoose() {
+  await mongoose.connect(process.env.ATLAS_URL);
+}
+
+exports.mongoose = mongoose;

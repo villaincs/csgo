@@ -1,10 +1,4 @@
-const Player = require("./models/Player");
-const Team = require("./models/Team");
 const Database = require("./Database");
-const dbError = require("./error");
-const errorCodes = require("./error/errorCodes");
-
-const { playerCollection, teamCollection, highlightCollection } = require("./mongo");
 
 const express = require("express");
 const app = express();
@@ -16,21 +10,6 @@ app.use(
 const port = 3000;
 
 let db = new Database();
-
-function sortByStat(stat, order) {
-  let playerStatArray = db.completePlayers.map((player) => {
-    return { name: player.playerInfo.name, [stat]: player.statistics[stat] };
-  });
-  playerStatArray.sort((a, b) => {
-    if (a[stat] > b[stat]) {
-      return order == "desc" ? -1 : 1;
-    } else if (a[stat] < b[stat]) {
-      return order == "desc" ? 1 : -1;
-    }
-    return 0;
-  });
-  return playerStatArray;
-}
 
 function isEmptyString(...strings) {
   for (str of strings) {

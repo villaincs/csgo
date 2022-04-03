@@ -2,16 +2,10 @@ const got = require("got");
 const { JSDOM } = require("jsdom");
 const dbError = require("../error");
 
-const { playerCollection, teamCollection, highlightCollection, liquipediaUrlExceptions } = require("../mongo");
+const { mongoose } = require("../mongo");
 
 const Highlight = require("./Highlight");
 const Team = require("./Team");
-
-const mongoose = require("mongoose");
-connectMongoose().catch((err) => console.log(err));
-async function connectMongoose() {
-  await mongoose.connect("mongodb://localhost:27017/csgodb");
-}
 
 class Info {
   constructor(name, realName, nationality, birthDate, age, team, role, approxWinnings) {
@@ -26,19 +20,7 @@ class Info {
   }
 }
 class Statistics {
-  constructor(
-    rating,
-    adr,
-    kpr,
-    dpr,
-    impact,
-    totalKills,
-    totalDeaths,
-    mapsPlayed,
-    roundsplayed,
-    hsPercentage,
-    kdRatio
-  ) {
+  constructor(rating, adr, kpr, dpr, impact, totalKills, totalDeaths, mapsPlayed, roundsplayed, hsPercentage, kdRatio) {
     this.rating = rating;
     this.adr = adr;
     this.kpr = kpr;
@@ -170,12 +152,7 @@ playerSchema.statics.createPlayerByHltvUrl = function (hltvUrl) {
 playerSchema.methods.populatePlayer = async function () {
   console.log(`Parsing ${this.playerHltvUrlName} (${this.hltvUrl})`);
   try {
-    await Promise.all([
-      getStatistics.call(this),
-      getTrophies.call(this),
-      getTeamsPlayedFor.call(this),
-      getHighlights.call(this),
-    ]);
+    await Promise.all([getStatistics.call(this), getTrophies.call(this), getTeamsPlayedFor.call(this), getHighlights.call(this)]);
     await getLiquipediaData.call(this, this.liquipediaUrl);
     console.log(`Successfully parsed ${this.info.name}\n`);
     this.isComplete = true;
@@ -188,85 +165,77 @@ playerSchema.methods.populatePlayer = async function () {
 };
 
 function getTeamsPlayedFor() {
-  return got("https://www.hltv.org/player/" + this.playerId + "/" + this.playerHltvUrlName + "#tab-teamsBox").then(
-    (response) => {
-      const dom = new JSDOM(response.body);
-      let teamTableRows = dom.window.document.getElementById("teamsBox").querySelectorAll("tr.team");
-      // Put team objects into array
-      let teams = [];
-      for (let i = 0; i < teamTableRows.length; i++) {
-        let name = teamTableRows[i].querySelector("span.team-name").textContent;
-        let icon = teamTableRows[i].querySelector("img.team-logo").src;
-        let joinDate = teamTableRows[i].querySelector("td.time-period-cell").textContent.split(" - ")[0];
-        let leaveDate = teamTableRows[i].querySelector("td.time-period-cell").textContent.split(" - ")[1];
-        teams.push(new TeamPlayedFor(name, icon, joinDate, leaveDate));
-      }
-      this.career.teamsPlayedFor = teams;
-
-      // Get player's name on HLTV to make Liquipedia Url
-      let hltvName = dom.window.document.querySelector("h1.playerNickname").textContent;
-      this.liquipediaUrl = `https://liquipedia.net/counterstrike/${hltvName}`;
+  return got("https://www.hltv.org/player/" + this.playerId + "/" + this.playerHltvUrlName + "#tab-teamsBox").then((response) => {
+    const dom = new JSDOM(response.body);
+    let teamTableRows = dom.window.document.getElementById("teamsBox").querySelectorAll("tr.team");
+    // Put team objects into array
+    let teams = [];
+    for (let i = 0; i < teamTableRows.length; i++) {
+      let name = teamTableRows[i].querySelector("span.team-name").textContent;
+      let icon = teamTableRows[i].querySelector("img.team-logo").src;
+      let joinDate = teamTableRows[i].querySelector("td.time-period-cell").textContent.split(" - ")[0];
+      let leaveDate = teamTableRows[i].querySelector("td.time-period-cell").textContent.split(" - ")[1];
+      teams.push(new TeamPlayedFor(name, icon, joinDate, leaveDate));
     }
-  );
+    this.career.teamsPlayedFor = teams;
+
+    // Get player's name on HLTV to make Liquipedia Url
+    let hltvName = dom.window.document.querySelector("h1.playerNickname").textContent;
+    this.liquipediaUrl = `https://liquipedia.net/counterstrike/${hltvName}`;
+  });
 }
 
 function getStatistics() {
-  return got("https://www.hltv.org/stats/players/" + this.playerId + "/" + this.playerHltvUrlName).then(
-    (response) => {
-      const dom = new JSDOM(response.body);
-      // Get divs containing player's stats and its values
-      let statsRowsDivs = dom.window.document.querySelectorAll("div.col.stats-rows>div");
-      // Create temporary object containing each stat
-      let statisticsTemp = {};
-      for (let div of statsRowsDivs) {
-        statisticsTemp[div.childNodes[0].textContent.toLowerCase()] = parseFloat(div.childNodes[1].textContent);
-      }
-      // Get impact rating
-      let impactRating;
-      for (let div of dom.window.document.querySelectorAll(
-        "div.summaryStatBreakdownRow div.summaryStatBreakdown"
-      )) {
-        if (div.childNodes[1].childNodes[0].textContent.startsWith("Impact")) {
-          impactRating = parseFloat(div.childNodes[3].childNodes[1].textContent);
-          break;
-        }
-      }
-      let keys = [
-        ["rating 1.0", "rating 2.0"],
-        ["damage / round"],
-        ["kills / round"],
-        ["deaths / round"],
-        ["total kills"],
-        ["total deaths"],
-        ["maps played"],
-        ["rounds played"],
-        ["headshot %"],
-        ["k/d ratio"],
-      ];
-      checkKeysInObject(keys, statisticsTemp);
-
-      let statistics = new Statistics(
-        statisticsTemp["rating 1.0"] || statisticsTemp["rating 2.0"],
-        statisticsTemp["damage / round"],
-        statisticsTemp["kills / round"],
-        statisticsTemp["deaths / round"],
-        impactRating,
-        statisticsTemp["total kills"],
-        statisticsTemp["total deaths"],
-        statisticsTemp["maps played"],
-        statisticsTemp["rounds played"],
-        statisticsTemp["headshot %"],
-        statisticsTemp["k/d ratio"]
-      );
-      this.statistics = statistics;
+  return got("https://www.hltv.org/stats/players/" + this.playerId + "/" + this.playerHltvUrlName).then((response) => {
+    const dom = new JSDOM(response.body);
+    // Get divs containing player's stats and its values
+    let statsRowsDivs = dom.window.document.querySelectorAll("div.col.stats-rows>div");
+    // Create temporary object containing each stat
+    let statisticsTemp = {};
+    for (let div of statsRowsDivs) {
+      statisticsTemp[div.childNodes[0].textContent.toLowerCase()] = parseFloat(div.childNodes[1].textContent);
     }
-  );
+    // Get impact rating
+    let impactRating;
+    for (let div of dom.window.document.querySelectorAll("div.summaryStatBreakdownRow div.summaryStatBreakdown")) {
+      if (div.childNodes[1].childNodes[0].textContent.startsWith("Impact")) {
+        impactRating = parseFloat(div.childNodes[3].childNodes[1].textContent);
+        break;
+      }
+    }
+    let keys = [
+      ["rating 1.0", "rating 2.0"],
+      ["damage / round"],
+      ["kills / round"],
+      ["deaths / round"],
+      ["total kills"],
+      ["total deaths"],
+      ["maps played"],
+      ["rounds played"],
+      ["headshot %"],
+      ["k/d ratio"],
+    ];
+    checkKeysInObject(keys, statisticsTemp);
+
+    let statistics = new Statistics(
+      statisticsTemp["rating 1.0"] || statisticsTemp["rating 2.0"],
+      statisticsTemp["damage / round"],
+      statisticsTemp["kills / round"],
+      statisticsTemp["deaths / round"],
+      impactRating,
+      statisticsTemp["total kills"],
+      statisticsTemp["total deaths"],
+      statisticsTemp["maps played"],
+      statisticsTemp["rounds played"],
+      statisticsTemp["headshot %"],
+      statisticsTemp["k/d ratio"]
+    );
+    this.statistics = statistics;
+  });
 }
 
 function getTrophies() {
-  return got(
-    "https://www.hltv.org/player/" + this.playerId + "/" + this.playerHltvUrlName + "#tab-trophiesBox"
-  ).then((response) => {
+  return got("https://www.hltv.org/player/" + this.playerId + "/" + this.playerHltvUrlName + "#tab-trophiesBox").then((response) => {
     const dom = new JSDOM(response.body);
     let trophyDivs = dom.window.document.getElementById("Trophies").querySelectorAll("div.trophy-event");
     let trophies = [];
@@ -279,39 +248,37 @@ function getTrophies() {
 
 // get highlights and save to highlight collection
 function getHighlights() {
-  return got(`https://www.hltv.org/player/${this.playerId}/${this.playerHltvUrlName}#tab-newsBox`).then(
-    async (response) => {
-      const dom = new JSDOM(response.body);
-      let newsTab = dom.window.document.querySelectorAll("a.subTab-newsArticle");
-      for (let article of newsTab) {
-        // Extract video articles that start with "Video: Player"
-        let articleContent = article.childNodes[1].textContent;
+  return got(`https://www.hltv.org/player/${this.playerId}/${this.playerHltvUrlName}#tab-newsBox`).then(async (response) => {
+    const dom = new JSDOM(response.body);
+    let newsTab = dom.window.document.querySelectorAll("a.subTab-newsArticle");
+    for (let article of newsTab) {
+      // Extract video articles that start with "Video: Player"
+      let articleContent = article.childNodes[1].textContent;
 
-        if (!articleContent.toLowerCase().startsWith(`video: ${this.playerHltvUrlName.toLowerCase()}`)) {
-          continue;
-        }
-
-        let id = article.href.split("/")[2];
-
-        let highlightObj = await Highlight.findOne({ highlightId: id });
-        if (highlightObj) {
-          continue;
-        }
-
-        let name = articleContent.substring(articleContent.indexOf(" ") + 1);
-        let url = `https://hltv.org${article.href}`;
-
-        highlightObj = new Highlight({
-          highlightId: id,
-          name: name,
-          url: url,
-          player: this._id,
-        });
-
-        await highlightObj.save();
+      if (!articleContent.toLowerCase().startsWith(`video: ${this.playerHltvUrlName.toLowerCase()}`)) {
+        continue;
       }
+
+      let id = article.href.split("/")[2];
+
+      let highlightObj = await Highlight.findOne({ highlightId: id });
+      if (highlightObj) {
+        continue;
+      }
+
+      let name = articleContent.substring(articleContent.indexOf(" ") + 1);
+      let url = `https://hltv.org${article.href}`;
+
+      highlightObj = new Highlight({
+        highlightId: id,
+        name: name,
+        url: url,
+        player: this._id,
+      });
+
+      await highlightObj.save();
     }
-  );
+  });
 }
 
 async function getLiquipediaData(liquipediaUrl) {
@@ -324,10 +291,8 @@ async function getLiquipediaData(liquipediaUrl) {
     // Get settings and gear from Liquipedia edit page and make object of them
     const liquipediaEditHtml = await got(
       "https://liquipedia.net" +
-        (
-          liquipediaDom.window.document.querySelector("a[title='Edit section: Gear and Settings']") ??
-          liquipediaDom.window.document.querySelector("a[title='Edit section: Gear and settings']")
-        ).href
+        (liquipediaDom.window.document.querySelector("a[title='Edit section: Gear and Settings']") ?? liquipediaDom.window.document.querySelector("a[title='Edit section: Gear and settings']"))
+          .href
     );
     const liquipediaEditDom = new JSDOM(liquipediaEditHtml.body);
     const playerDataArray = liquipediaEditDom.window.document.getElementById("wpTextbox1").textContent.split("\n");
@@ -368,23 +333,14 @@ function getPlayerInfo(liquipediaDom) {
     }
 
     // check if site changed and keys broken, throw error if it has
-    let keys = [
-      ["Romanized Name:", "Name:"],
-      ["Nationality:", "Nationalities:"],
-      ["Born:"],
-      ["Team:"],
-      ["Role:", "Roles:"],
-      ["Approx. Total Winnings:"],
-    ];
+    let keys = [["Romanized Name:", "Name:"], ["Nationality:", "Nationalities:"], ["Born:"], ["Team:"], ["Role:", "Roles:"], ["Approx. Total Winnings:"]];
     checkKeysInObject(keys, tempObject);
 
     let name = liquipediaDom.window.document.getElementById("firstHeading").textContent;
     let realName = tempObject["Romanized Name:"] || tempObject["Name:"];
     let nationality = tempObject["Nationality:"] || tempObject["Nationalities:"];
     let birthDate = tempObject["Born:"].substring(0, tempObject["Born:"].indexOf("(") - 1);
-    let age = getAge(
-      tempObject["Born:"].substring(tempObject["Born:"].indexOf("(") + 1, tempObject["Born:"].indexOf(")"))
-    );
+    let age = getAge(tempObject["Born:"].substring(tempObject["Born:"].indexOf("(") + 1, tempObject["Born:"].indexOf(")")));
     let team = tempObject["Team:"];
     let role = tempObject["Role:"] || tempObject["Roles:"];
     let approxWinnings = tempObject["Approx. Total Winnings:"];
@@ -456,14 +412,7 @@ function getSettings(dataObject) {
 }
 
 function getGear(dataObject) {
-  let gearKeys = [
-    ["mouse-brand"],
-    ["mouse-model"],
-    ["keyboard-brand", "keyboard-model"],
-    ["headset-brand", "headset-model"],
-    ["pad-brand", "pad-model"],
-    ["monitor-brand", "monitor-model"],
-  ];
+  let gearKeys = [["mouse-brand"], ["mouse-model"], ["keyboard-brand", "keyboard-model"], ["headset-brand", "headset-model"], ["pad-brand", "pad-model"], ["monitor-brand", "monitor-model"]];
   checkKeysInObject(gearKeys, dataObject);
 
   let gearObject = {
