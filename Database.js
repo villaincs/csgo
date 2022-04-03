@@ -48,7 +48,7 @@ module.exports = class Database {
       let teamDivs = dom.window.document.querySelectorAll("div.ranked-team.standard-box");
       teamDivs = [...teamDivs].slice(0);
 
-      let teamsToParse = 2;
+      let teamsToParse = 1;
       for (let i = 0; i < teamsToParse; i++) {
         let hrefSplit = teamDivs[i].querySelector("a.moreLink:not(.details)").href.split("/");
         let teamId = hrefSplit[hrefSplit.length - 2];
@@ -56,8 +56,8 @@ module.exports = class Database {
         let teamPosition = teamDivs[i].querySelector("span.position").textContent.substring(1);
         let teamLogo = teamDivs[i].querySelector("img").src;
 
+        // Check if team id is already in team collection, create new team if not
         let teamObj = await Team.findOne({ teamId });
-
         if (!teamObj) {
           teamObj = new Team({ teamId });
         }
@@ -66,12 +66,14 @@ module.exports = class Database {
         teamObj.position = teamPosition;
         teamObj.logo = teamLogo;
 
-        // set team id refs for player
+        // update and set team id ref for each player
         for (let playerDiv of teamDivs[i].querySelectorAll("td.player-holder a.pointer")) {
           let playerUrl = `https://www.hltv.org${playerDiv.href}`;
           let playerObj = await this.updatePlayerObject(playerUrl);
-          // set team ref for player
+          console.log(teamObj._id);
           playerObj.info.team = teamObj._id;
+
+          break;
         }
 
         await teamObj.save();
@@ -88,7 +90,7 @@ module.exports = class Database {
         .populate("career.highlights")
         .sort({ [sort]: order });
     } else {
-      playerArray = await Player.find({ isComplete: true }).populate("career.highlights");
+      playerArray = await Player.find({ isComplete: true }).populate("career.highlights").populate("info.team");
     }
 
     return playerArray;
