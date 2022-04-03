@@ -8,7 +8,7 @@ const Highlight = require("./Highlight");
 const Team = require("./Team");
 
 class Info {
-  constructor(name, realName, nationality, birthDate, age, team, role, approxWinnings) {
+  constructor(name, realName, nationality, birthDate, age, role, approxWinnings) {
     this.name = name;
     this.realName = realName;
     this.nationality = nationality;
@@ -261,6 +261,7 @@ function getHighlights() {
 
       let id = article.href.split("/")[2];
 
+      // continue if highlight Id is already in highlight collection
       let highlightObj = await Highlight.findOne({ highlightId: id });
       if (highlightObj) {
         continue;
@@ -341,7 +342,6 @@ function getPlayerInfo(liquipediaDom) {
     let nationality = tempObject["Nationality:"] || tempObject["Nationalities:"];
     let birthDate = tempObject["Born:"].substring(0, tempObject["Born:"].indexOf("(") - 1);
     let age = getAge(tempObject["Born:"].substring(tempObject["Born:"].indexOf("(") + 1, tempObject["Born:"].indexOf(")")));
-    let team = tempObject["Team:"];
     let role = tempObject["Role:"] || tempObject["Roles:"];
     let approxWinnings = tempObject["Approx. Total Winnings:"];
 

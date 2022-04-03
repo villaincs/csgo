@@ -70,10 +70,8 @@ module.exports = class Database {
         for (let playerDiv of teamDivs[i].querySelectorAll("td.player-holder a.pointer")) {
           let playerUrl = `https://www.hltv.org${playerDiv.href}`;
           let playerObj = await this.updatePlayerObject(playerUrl);
-          console.log(teamObj._id);
           playerObj.info.team = teamObj._id;
-
-          break;
+          playerObj.save();
         }
 
         await teamObj.save();
@@ -90,7 +88,7 @@ module.exports = class Database {
         .populate("career.highlights")
         .sort({ [sort]: order });
     } else {
-      playerArray = await Player.find({ isComplete: true }).populate("career.highlights").populate("info.team");
+      playerArray = await Player.find({ isComplete: true }).populate("career.highlights");
     }
 
     return playerArray;
@@ -119,6 +117,12 @@ module.exports = class Database {
     return players;
   }
 
+  async fixLiquipediaUrlByPlayerId(playerId, correctUrl) {
+    let player = await this.getPlayerById(playerId);
+    player.liquipediaUrl = correctUrl;
+    player.save();
+  }
+
   //##########################################################################################################
   // highlight functions
   //##########################################################################################################
@@ -130,10 +134,16 @@ module.exports = class Database {
     return highlight;
   }
 
+  async getHighlightArray() {
+    let highlightArray = await Highlight.find({});
+    return highlightArray;
+  }
+
   async addHighlightByPlayerId(playerId, name, url) {
-    let player = await Player.find({ playerId: playerId });
+    let player = await this.getPlayerById(playerId);
 
     let highlight = new Highlight({
+      //TODO: no of highlight inserted
       name: name,
       url: url,
       player: player._id,
