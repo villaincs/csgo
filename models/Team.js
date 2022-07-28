@@ -1,6 +1,5 @@
 const { mongoose } = require("../mongo");
 
-const Player = require("./Player");
 const schema = new mongoose.Schema(
   {
     teamId: String,

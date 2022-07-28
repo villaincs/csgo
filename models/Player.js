@@ -64,7 +64,7 @@ const careerSchema = new mongoose.Schema(
       },
     ],
     trophies: [],
-    player: { type: mongoose.Schema.Types.ObjectId, ref: "Player" },
+    player: { type: mongoose.Schema.Types.ObjectId, ref: "players" },
   },
   {
     toJSON: { virtuals: true }, // So `res.json()` and other `JSON.stringify()` functions include virtuals
@@ -80,7 +80,7 @@ const playerSchema = new mongoose.Schema(
       realName: String,
       nationality: String,
       birthDate: String,
-      team: { type: mongoose.Schema.Types.ObjectId, ref: "Team" },
+      team: { type: mongoose.Schema.Types.ObjectId, ref: "teams" },
       age: Number,
       role: String,
       approxWinnings: String,
@@ -111,7 +111,7 @@ const playerSchema = new mongoose.Schema(
       zoomSensitivity: Number,
       resolution: String,
       scalingMode: String,
-      crosshairCode: Number,
+      crosshairCode: String,
     },
     career: careerSchema,
     playerHltvUrlName: String,

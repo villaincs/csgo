@@ -46,9 +46,9 @@ module.exports = class Database {
     return got("https://www.hltv.org/ranking/teams").then(async (response) => {
       const dom = new JSDOM(response.body);
       let teamDivs = dom.window.document.querySelectorAll("div.ranked-team.standard-box");
-      teamDivs = [...teamDivs].slice(0);
+      teamDivs = [...teamDivs].slice(1);
 
-      let teamsToParse = 1;
+      let teamsToParse = 19;
       for (let i = 0; i < teamsToParse; i++) {
         let hrefSplit = teamDivs[i].querySelector("a.moreLink:not(.details)").href.split("/");
         let teamId = hrefSplit[hrefSplit.length - 2];
@@ -70,6 +70,7 @@ module.exports = class Database {
         for (let playerDiv of teamDivs[i].querySelectorAll("td.player-holder a.pointer")) {
           let playerUrl = `https://www.hltv.org${playerDiv.href}`;
           let playerObj = await this.updatePlayerObject(playerUrl);
+          
           playerObj.info.team = teamObj._id;
           playerObj.save();
         }
@@ -88,7 +89,7 @@ module.exports = class Database {
         .populate("career.highlights")
         .sort({ [sort]: order });
     } else {
-      playerArray = await Player.find({ isComplete: true }).populate("career.highlights");
+      playerArray = await Player.find({ isComplete: true }).populate("career.highlights").populate("info.team");
     }
 
     return playerArray;
@@ -135,7 +136,8 @@ module.exports = class Database {
   }
 
   async getHighlightArray() {
-    let highlightArray = await Highlight.find({});
+    //TODO: populate player fix
+    let highlightArray = await Highlight.find({}).populate("player");
     return highlightArray;
   }
 
